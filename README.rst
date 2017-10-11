@@ -13,7 +13,7 @@ A Slack app token with following permission scopes.
 
 ``channels:read`` is not required when channelId is given.
 
-.. _SlackApps: https://api.slack.com/apps
+`SlackApps <https://api.slack.com/apps>`_
 
 Basic Usage
 ================
