@@ -12,6 +12,7 @@ SLACK_METHODS = {
     'getPinnedMessages': 'pins.list', 
     'addPin': 'pins.add',
     'postMessage': 'chat.postMessage',
+    'updateMessage': 'chat.update',
     'getChannels': 'channels.list',
 }
 
@@ -24,7 +25,10 @@ class Client(object):
         self.storageKey = storageKey
         self.channel = self.fetchChannelId(channel) if channel.startswith('#') else channel
         self.username = username
-        self.storage = self.fetchRemoteStorage()
+
+        fetched = self.fetchRemoteStorage()
+        self.data = fetched['data'] if fetched else None
+        self.ts = fetched['ts'] if fetched else None
 
     def fetchChannelId(self, channelName):
         response = requests.get(SLACK_API + SLACK_METHODS['getChannels'], params={
@@ -45,15 +49,65 @@ class Client(object):
         }).json()
 
         if response['ok']:
-            storageString = [item['message'] for item in response['items'] if item['message'].startswith(self.storageKey)]
+            items = response['items']
+            storageItem = [item['message'] for item in items if item['type'] == 'message' and item['message']['text'].startswith(self.storageKey)]
 
-            if storageString:
-                return re.sub(self.storageKey, '', storageString[0], 1)
-
+            if storageItem:
+                return {
+                    'data': self.parseDataText(storageItem[0]['text']),
+                    'ts': storageItem[0]['ts']
+                }
         return None
 
+    def generateDataText(self, data):
+        text = self.storageKey + json.dumps(data)
+        return text
+
+    def parseDataText(self, storageString):
+        data = re.sub(self.storageKey, '', storageString, 1)
+        return data
+
+    def createRemoteStorage(self, message):
+        response = requests.post(SLACK_API + SLACK_METHODS['postMessage'], data={
+            'token': self.token,
+            'channel': self.channel,
+            'text': self.generateDataText(message),
+            'username': self.username,
+        }).json()
+
+        if response['ok']:
+            self.data = self.parseDataText(response['message']['text'])
+            self.ts = response['ts']
+
+            requests.post(SLACK_API + SLACK_METHODS['addPin'], data={
+                'token': self.token,
+                'channel': self.channel,
+                'timestamp': self.ts
+            })
+
+        return self.data
+
+    def updateRemoteStorage(self, message):
+        response = requests.post(SLACK_API + SLACK_METHODS['updateMessage'], data={
+            'token': self.token,
+            'channel': self.channel,
+            'text': self.generateDataText(message),
+            'ts': self.ts,
+            'username': self.username,
+        }).json()
+
+        if response['ok']:
+            self.data = self.parseDataText(response['text'])
+            self.ts = response['ts']
+
+        return self.data
+
     def set(self, value):
-        return value;
+        if self.data and self.ts:
+            self.updateRemoteStorage(value)
+        else:
+            self.createRemoteStorage(value)
+        return self
 
     def get(self):
-        return value
+        return self.data
