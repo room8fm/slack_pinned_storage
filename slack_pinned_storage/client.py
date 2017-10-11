@@ -16,7 +16,7 @@ SLACK_METHODS = {
     'getChannels': 'channels.list',
 }
 
-class Client(object):
+class SlackPinnedStorage(object):
     """
     Client
     """
