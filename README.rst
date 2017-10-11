@@ -4,7 +4,16 @@ Slack Pinned Storage
 
 Requirements
 ================
-https://api.slack.com/apps
+A Slack app token with following permission scopes.
+
+- chat:write:bot(required)
+- pins:read(required)
+- pins:write(required)
+- channels:read(optional)
+
+``channels:read`` is not required when channelId is given.
+
+.. _SlackApps: https://api.slack.com/apps
 
 Basic Usage
 ================
