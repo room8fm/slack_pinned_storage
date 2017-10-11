@@ -32,7 +32,10 @@ Setting and getting a value
   sps = SlackPinnedStorage(token, storageIdentifier, channel)
 
   sps.set({'hello': 'python', 'fun': True})
+
   sps.get()
+  >>> {'hello': 'python', 'fun': True}
+
 
 After setting a value, post a json-stringified data as a message in the channel.
 ``IDENTIFIER_STRING{"hello": "python", "fun": true}``
