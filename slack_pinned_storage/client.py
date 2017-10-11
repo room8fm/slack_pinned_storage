@@ -35,7 +35,8 @@ class Client(object):
             return None
 
         name = re.sub(r'^#', '', channelName)
-        return [channel['id'] for channel in response['channels'] if channel['name'] == name]
+        channel = [channel['id'] for channel in response['channels'] if channel['name'] == name]
+        return channel[0] if channel else None
 
     def fetchRemoteStorage(self):
         response = requests.get(SLACK_API + SLACK_METHODS['getPinnedMessages'], params={
@@ -47,7 +48,7 @@ class Client(object):
             storageString = [item['message'] for item in response['items'] if item['message'].startswith(self.storageKey)]
 
             if storageString:
-                return re.sub(self.storageKey, '', storageString, 1)
+                return re.sub(self.storageKey, '', storageString[0], 1)
 
         return None
 
