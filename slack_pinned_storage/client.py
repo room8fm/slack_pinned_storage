@@ -64,8 +64,8 @@ class Client(object):
         return text
 
     def parseDataText(self, storageString):
-        data = re.sub(self.storageKey, '', storageString, 1)
-        return data
+        jsonString = re.sub(self.storageKey, '', storageString, 1)
+        return json.loads(jsonString)
 
     def createRemoteStorage(self, message):
         response = requests.post(SLACK_API + SLACK_METHODS['postMessage'], data={
