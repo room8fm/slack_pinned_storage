@@ -17,6 +17,6 @@ setup(
     author='RyoNkmr',
     author_email='ryonakamuraryo@gmail.com',
     url='https://github.com/room8.fm/slack-pinned-storage',
-    install_requires=['requests', 'u-msgpack-python'],
+    install_requires=['requests', 'python-dateutil'],
     packages=find_packages(exclude=('tests', 'docs'))
 )

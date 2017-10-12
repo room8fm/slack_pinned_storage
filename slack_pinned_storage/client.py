@@ -1,11 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import umsgpack
+import dateutil.parser
 import requests
 import json
 import os
 import re
+
+from datetime import date, datetime
 
 SLACK_API = 'https://slack.com/api/'
 SLACK_METHODS = {
@@ -60,12 +62,12 @@ class SlackPinnedStorage(object):
         return None
 
     def generateDataText(self, data):
-        text = self.storageKey + json.dumps(data)
+        text = self.storageKey + json.dumps(data, default=json_serializer)
         return text
 
     def parseDataText(self, storageString):
         jsonString = re.sub(self.storageKey, '', storageString, 1)
-        return json.loads(jsonString)
+        return json.loads(jsonString, object_hook=json_parser)
 
     def createRemoteStorage(self, message):
         response = requests.post(SLACK_API + SLACK_METHODS['postMessage'], data={
@@ -111,3 +113,17 @@ class SlackPinnedStorage(object):
 
     def get(self):
         return self.data
+
+def json_serializer(value):
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    raise TypeError ("Type %s not serializable" % type(value))
+
+def json_parser(data):
+    for key, value in data.items():
+        if isinstance(value, str):
+            try:
+                data[key] = dateutil.parser.parse(value)
+            except:
+                pass
+    return data
