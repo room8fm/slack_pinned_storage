@@ -29,20 +29,20 @@ class SlackPinnedStorage(object):
         self.username = username
 
         fetched = self.fetchRemoteStorage()
-        self.data = fetched['data'] if fetched else None
-        self.ts = fetched['ts'] if fetched else None
+        self.data = fetched.get('data')
+        self.ts = fetched.get('ts')
 
     def fetchChannelId(self, channelName):
         response = requests.get(SLACK_API + SLACK_METHODS['getChannels'], params={
             'token': self.token,
         }).json()
 
-        if not response['ok']:
-            return None
+        channelName = re.sub(r'^#', '', channelName)
 
-        name = re.sub(r'^#', '', channelName)
-        channel = [channel['id'] for channel in response['channels'] if channel['name'] == name]
-        return channel[0] if channel else None
+        if response.get('ok'):
+            for channel in response.get('channels'):
+                if channel.get('name') == channelName:
+                    return channel
 
     def fetchRemoteStorage(self):
         response = requests.get(SLACK_API + SLACK_METHODS['getPinnedMessages'], params={
@@ -50,22 +50,25 @@ class SlackPinnedStorage(object):
             'channel': self.channel,
         }).json()
 
-        if response['ok']:
-            items = response['items']
-            storageItem = [item['message'] for item in items if item['type'] == 'message' and item['message']['text'].startswith(self.storageKey)]
+        if response.get('ok'):
+            items = response.get('items')
 
-            if storageItem:
-                return {
-                    'data': self.parseDataText(storageItem[0]['text']),
-                    'ts': storageItem[0]['ts']
-                }
-        return None
+            for item in items:
+                if item.get('type') == 'message':
+                    storage = item.get('message', {}).get('text', '').startswith(self.storageKey)
+
+                    return {
+                        'data': self.parseDataText(storage.get('text')),
+                        'ts': storage.get('ts'),
+                    }
 
     def generateDataText(self, data):
         text = self.storageKey + json.dumps(data, default=json_serializer)
         return text
 
-    def parseDataText(self, storageString):
+    def parseDataText(self, storageString=''):
+        if storageString == '':
+            return '' 
         jsonString = re.sub(self.storageKey, '', storageString, 1)
         return json.loads(jsonString, object_hook=json_parser)
 
@@ -77,9 +80,9 @@ class SlackPinnedStorage(object):
             'username': self.username,
         }).json()
 
-        if response['ok']:
-            self.data = self.parseDataText(response['message']['text'])
-            self.ts = response['ts']
+        if response.get('ok'):
+            self.data = self.parseDataText(response.get('message', {}).get('text'))
+            self.ts = response.get('ts')
 
             requests.post(SLACK_API + SLACK_METHODS['addPin'], data={
                 'token': self.token,
@@ -98,9 +101,9 @@ class SlackPinnedStorage(object):
             'username': self.username,
         }).json()
 
-        if response['ok']:
-            self.data = self.parseDataText(response['text'])
-            self.ts = response['ts']
+        if response.get('ok'):
+            self.data = self.parseDataText(response.get('text'))
+            self.ts = response.get('ts')
 
         return self.data
 
@@ -117,7 +120,7 @@ class SlackPinnedStorage(object):
 def json_serializer(value):
     if isinstance(value, (datetime, date)):
         return value.isoformat()
-    raise TypeError ("Type %s not serializable" % type(value))
+    raise TypeError ('Type %s not serializable' % type(value))
 
 def json_parser(data):
     for key, value in data.items():
